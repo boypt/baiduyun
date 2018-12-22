@@ -1233,7 +1233,7 @@
 
       $('div.module-share-top-bar div.bar div.x-button-box').append($dropdownbutton);
 
-      unsafeWindow.addAria2Button($dropdownbutton_span, linkButtonClick);
+      unsafeWindow.addAria2Button($dropdownbutton_span);
     }
 
     function createIframe() {
@@ -2282,12 +2282,12 @@
   }
 
 
-  unsafeWindow.addAria2Button = function ($dropdownbutton_span, downloadlink) {
+  unsafeWindow.addAria2Button = function ($dropdownbutton_span) {
     var $aria2Button = $('<a data-menu-id="b-menu209" class="g-button-menu" href="javascript:void(0);">Aria2下载</a>');
     var $aria2ConfButton = $('<a data-menu-id="b-menu210" class="g-button-menu" href="javascript:void(0);">Aria2配置</a>');
-    $aria2Button.click(()=>{
+    $aria2Button.click((event)=>{
       unsafeWindow.aria2download_clicked = true;
-      downloadlink();
+      $(event.target).prev().click();
     });
     $aria2ConfButton.click(()=>{
       aria2conf_dialog.open();
@@ -2301,6 +2301,7 @@
   unsafeWindow.aria2Download_Link = function(linkList) {
     let name = linkList.filename
     let url = linkList.urls[0].url
+    console.log("linkList", linkList)
     aria2down(url, name, (ret)=>{
       console.log("aria2 rpc ret", ret)
       if("result" in ret) {
