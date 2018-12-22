@@ -17,6 +17,7 @@
 // @run-at            document-end
 // @grant             unsafeWindow
 // @grant             GM_setClipboard
+// @grant             GM_xmlhttpRequest
 // ==/UserScript==
 
 (function () {
@@ -1231,6 +1232,8 @@
       $linkButton.click(linkButtonClick);
 
       $('div.module-share-top-bar div.bar div.x-button-box').append($dropdownbutton);
+
+      unsafeWindow.addAria2Button($dropdownbutton_span, linkButtonClick);
     }
 
     function createIframe() {
@@ -1579,8 +1582,13 @@
               {url: link, rank: 1}
             ]
           };
-          var tip = "显示获取的链接，可以使用右键迅雷下载，复制无用，需要传递cookie";
-          dialog.open({title: '下载链接', type: 'link', list: linkList, tip: tip});
+          if('aria2download_clicked' in unsafeWindow && unsafeWindow.aria2download_clicked) {
+            unsafeWindow.aria2download_clicked = false
+            unsafeWindow.aria2Download_Link(linkList)
+          } else {
+            var tip = "显示获取的链接，可以使用右键迅雷下载，复制无用，需要传递cookie";
+            dialog.open({title: '下载链接', type: 'link', list: linkList, tip: tip});
+          }
         }
       } else {
         alert('发生错误！');
@@ -1644,8 +1652,14 @@
             {url: link, rank: 1}
           ]
         };
-        var tip = "显示获取的链接，可以使用右键迅雷下载，复制无用，需要传递cookie";
-        dialog.open({title: '下载链接', type: 'link', list: linkList, tip: tip});
+
+        if('aria2download_clicked' in unsafeWindow && unsafeWindow.aria2download_clicked) {
+          unsafeWindow.aria2download_clicked = false
+          unsafeWindow.aria2Download_Link(linkList)
+        } else {
+          var tip = "显示获取的链接，可以使用右键迅雷下载，复制无用，需要传递cookie";
+          dialog.open({title: '下载链接', type: 'link', list: linkList, tip: tip});
+        }
       } else {
         alert('获取下载链接失败！');
         return;
@@ -2118,4 +2132,184 @@
     });
   }
 
+})();
+
+(function (){
+
+  /* ARIA2 apis */
+  var aria2api = function(method, params, callback) {
+      var ids = Math.round(Math.random()*10000001);
+      var aria2addr = window.localStorage ? localStorage.getItem("aria2addr") : "";
+      var aria2token = window.localStorage ? localStorage.getItem("aria2token") : "";
+      var param = []
+
+      if(aria2token != "") {
+        param.push(`token:${aria2token}`)
+      }
+      param = param.concat(params)
+
+      var data = {
+        jsonrpc: "2.0",
+        id: ids,
+        params: param,
+        method: method
+      };
+
+      if (!aria2addr) {
+        alert('aria2addr empty')
+        return
+      }
+
+      // console.log(data)
+      GM_xmlhttpRequest({
+        url: aria2addr,
+        method: 'POST',
+        data: JSON.stringify(data),
+        dataType: 'json',
+        onload: function(ret) {
+          ret = JSON.parse(ret.responseText);
+          if('error' in ret) {
+            alert(`Error: ${ret['error']['message']}`)
+          }
+          callback(ret);
+        },
+        onerror: function(ret) {
+          console.error(ret);
+          alert("内部错误，请刷新页面, 若无效需重启Aria2");
+        },
+        ontimeout: function(ret) {
+          console.error("request timeout");
+          alert("请求超时，请重启Aria2");
+        }
+      });
+  };
+
+  var aria2getVersion = function(callback) {
+    aria2api("aria2.getVersion", [], callback);
+  }
+
+  var aria2down = function(url, filename, callback) {
+    var aria2header = window.localStorage ? localStorage.getItem("aria2header") : "";
+    var param = [
+        [ url ],
+        { out: filename, header: aria2header }
+    ]
+    aria2api("aria2.addUri", param, callback);
+  };
+  /* ARIA2 apis */
+
+  var aria2conf_dialog 
+
+  function aria2ConfDialog() {
+    var dialog, shadow, panHelper;
+
+    this.keys = ["aria2addr", "aria2header", "aria2token"]
+
+    this.createDialog = function() {
+      var screenWidth = document.body.clientWidth;
+      var dialogLeft = screenWidth > 520 ? (screenWidth - 520) / 2 : 0;
+      var $dialog_div = $('<div class="dialog" id="dialog-vcode" style="width:520px;top:0px;bottom:auto;left:' + dialogLeft + 'px;right:auto;display:none;visibility:visible;z-index:52"></div>');
+      var $dialog_header = $('<div class="dialog-header"><h3><span class="dialog-header-title"><em class="select-text">提示</em></span></h3></div>');
+      var $dialog_control = $('<div class="dialog-control"><span class="dialog-icon dialog-close icon icon-close"><span class="sicon">x</span></span></div>');
+      var $dialog_body = $('<div class="dialog-body"></div>');
+      var $dialog_body_div = $('<div style="text-align:center;padding:22px"></div>');
+      var $dialog_input_aria2addr = $('<p><label>Aria2 URL</label><input id="aria2addr" type="text" style="margin: 10px 5px;padding:3px;width:120px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
+      var $dialog_input_header = $('<p><label>Aria2 Header</label><input id="aria2header" type="text" style="margin: 10px 5px;padding:3px;width:120px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
+      var $dialog_input_token = $('<p><label>Aria2 Token</label><input id="aria2token" type="text" style="margin: 10px 5px;padding:3px;width:120px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
+      var $dialog_footer = $('<div class="dialog-footer g-clearfix"></div>');
+      var $dialog_confirm_button = $('<a class="g-button g-button-blue" data-button-id="" data-button-index href="javascript:void(0)" style="padding-left:36px"><span class="g-button-right" style="padding-right:36px;"><span class="text" style="width:auto;">确定</span></span></a>');
+      var $dialog_test_button = $('<a class="g-button g-button" data-button-id="" data-button-index href="javascript:void(0)" style="padding-left:36px"><span class="g-button-right" style="padding-right:36px;"><span class="text" style="width:auto;">测试</span></span></a>');
+      var $dialog_cancel_button = $('<a class="g-button" data-button-id="" data-button-index href="javascript:void(0);" style="padding-left: 36px;"><span class="g-button-right" style="padding-right: 36px;"><span class="text" style="width: auto;">取消</span></span></a>');
+
+
+      $dialog_header.append($dialog_control);
+      $dialog_body_div.append($dialog_input_aria2addr).append($dialog_input_header).append($dialog_input_token);
+      $dialog_body.append($dialog_body_div);
+      $dialog_footer.append($dialog_confirm_button).append($dialog_test_button).append($dialog_cancel_button);
+      $dialog_div.append($dialog_header).append($dialog_body).append($dialog_footer);
+      $('body').append($dialog_div);
+
+      $dialog_div.dialogDrag();
+
+      $dialog_control.click(dialogControl);
+      $dialog_confirm_button.click($.proxy(this.confirmClick, this));
+      $dialog_cancel_button.click(dialogControl);
+      $dialog_test_button.click($.proxy(()=>{
+        this.saveConf()
+        aria2getVersion((ret)=>{
+          if ('result' in ret) {
+            alert(`OK! Aria2 Version: ${ret["result"]["version"]}`);
+          }
+        })
+      }, this));
+      return $dialog_div;
+    }
+
+    this.saveConf = function() {
+      $.each(this.keys, (_, key) => {
+        let val = $("#"+key).val()
+        localStorage.setItem(key, val)
+        console.log(key, val)
+      })
+    }
+
+    this.confirmClick = function() {
+      this.saveConf()
+      this.close()
+    }
+
+    this.open = function () {
+      $.each(this.keys, (i,key) => {
+        let val = localStorage.getItem(key) || ""
+        $("#"+key).val(val)
+      })
+      dialog.show();
+      shadow.show();
+    }
+
+    this.close = function () {
+      dialogControl();
+    }
+
+
+    function dialogControl() {
+      dialog.hide();
+      shadow.hide();
+    }
+
+    shadow = $('div.dialog-shadow');
+    dialog = this.createDialog();
+  }
+
+
+  unsafeWindow.addAria2Button = function ($dropdownbutton_span, downloadlink) {
+    var $aria2Button = $('<a data-menu-id="b-menu209" class="g-button-menu" href="javascript:void(0);">Aria2下载</a>');
+    var $aria2ConfButton = $('<a data-menu-id="b-menu210" class="g-button-menu" href="javascript:void(0);">Aria2配置</a>');
+    $aria2Button.click(()=>{
+      unsafeWindow.aria2download_clicked = true;
+      downloadlink();
+    });
+    $aria2ConfButton.click(()=>{
+      aria2conf_dialog.open();
+    });
+
+    $dropdownbutton_span
+      .append($aria2Button)
+      .append($aria2ConfButton);
+  }
+
+  unsafeWindow.aria2Download_Link = function(linkList) {
+    let name = linkList.filename
+    let url = linkList.urls[0].url
+    aria2down(url, name, (ret)=>{
+      console.log("aria2 rpc ret", ret)
+      if("result" in ret) {
+        alert(`Task added successful. ${name}: ${ret['result']}`)
+      }
+    });
+  }
+
+  $(()=>{
+    aria2conf_dialog = new aria2ConfDialog();
+  })
 })();
