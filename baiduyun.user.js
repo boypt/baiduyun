@@ -2143,11 +2143,16 @@
       var aria2token = window.localStorage ? localStorage.getItem("aria2token") : "";
       var param = []
 
+      if (aria2addr == "") {
+        alert('aria2addr empty')
+        return
+      }
+
       if(aria2token != "") {
         param.push(`token:${aria2token}`)
       }
-      param = param.concat(params)
 
+      param = param.concat(params)
       var data = {
         jsonrpc: "2.0",
         id: ids,
@@ -2155,19 +2160,18 @@
         method: method
       };
 
-      if (!aria2addr) {
-        alert('aria2addr empty')
-        return
-      }
-
       // console.log(data)
       GM_xmlhttpRequest({
         url: aria2addr,
         method: 'POST',
         data: JSON.stringify(data),
-        dataType: 'json',
-        onload: function(ret) {
-          ret = JSON.parse(ret.responseText);
+        overrideMimeType: 'application/json',
+        onload: function(r) {
+          if (r.status != 200 ) {
+            alert(`Error: aria2 server response code${r.status} - ${r.statusText}`)
+            return
+          }
+          let ret = JSON.parse(r.responseText);
           if('error' in ret) {
             alert(`Error: ${ret['error']['message']}`)
           }
@@ -2231,9 +2235,13 @@
 
       $dialog_div.dialogDrag();
 
-      $dialog_control.click(dialogControl);
-      $dialog_confirm_button.click($.proxy(this.confirmClick, this));
-      $dialog_cancel_button.click(dialogControl);
+      $dialog_control.click(this.close);
+      $dialog_cancel_button.click(this.close);
+
+      $dialog_confirm_button.click($.proxy(()=>{
+        this.saveConf()
+        this.close()
+      }, this));
       $dialog_test_button.click($.proxy(()=>{
         this.saveConf()
         aria2getVersion((ret)=>{
@@ -2249,13 +2257,8 @@
       $.each(this.keys, (_, key) => {
         let val = $("#"+key).val()
         localStorage.setItem(key, val)
-        console.log(key, val)
+        console.log("save aria2 conf: ", key, val)
       })
-    }
-
-    this.confirmClick = function() {
-      this.saveConf()
-      this.close()
     }
 
     this.open = function () {
@@ -2268,11 +2271,6 @@
     }
 
     this.close = function () {
-      dialogControl();
-    }
-
-
-    function dialogControl() {
       dialog.hide();
       shadow.hide();
     }
