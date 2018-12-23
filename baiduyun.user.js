@@ -2167,8 +2167,9 @@
         data: JSON.stringify(data),
         overrideMimeType: 'application/json',
         onload: function(r) {
-          if (r.status != 200 ) {
-            alert(`Error: aria2 server response code${r.status} - ${r.statusText}`)
+          if (r.status != 200 && r.status != 400) {
+            // 200: OK  400: Unauthorized
+            alert(`Error: aria2 server response code: ${r.status} - ${r.statusText}`)
             return
           }
           let ret = JSON.parse(r.responseText);
@@ -2217,9 +2218,9 @@
       var $dialog_control = $('<div class="dialog-control"><span class="dialog-icon dialog-close icon icon-close"><span class="sicon">x</span></span></div>');
       var $dialog_body = $('<div class="dialog-body"></div>');
       var $dialog_body_div = $('<div style="text-align:center;padding:22px"></div>');
-      var $dialog_input_aria2addr = $('<p><label>Aria2 URL</label><input id="aria2addr" type="text" style="margin: 10px 5px;padding:3px;width:120px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
-      var $dialog_input_header = $('<p><label>Aria2 Header</label><input id="aria2header" type="text" style="margin: 10px 5px;padding:3px;width:120px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
-      var $dialog_input_token = $('<p><label>Aria2 Token</label><input id="aria2token" type="text" style="margin: 10px 5px;padding:3px;width:120px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
+      var $dialog_input_aria2addr = $('<p><label style="display:inline-block;width:100px;">Aria2 URL</label><input id="aria2addr" type="text" style="margin: 10px 5px;padding:3px;width:350px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
+      var $dialog_input_header = $('<p><label style="display:inline-block;width:100px;">Aria2 Header</label><input id="aria2header" type="text" style="margin: 10px 5px;padding:3px;width:350px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
+      var $dialog_input_token = $('<p><label style="display:inline-block;width:100px;">Aria2 Token</label><input id="aria2token" type="text" style="margin: 10px 5px;padding:3px;width:350px;height:23px;border:1px solid #c6c6c6;background-color:white;vertical-align:middle;" class="input-code"></p>');
       var $dialog_footer = $('<div class="dialog-footer g-clearfix"></div>');
       var $dialog_confirm_button = $('<a class="g-button g-button-blue" data-button-id="" data-button-index href="javascript:void(0)" style="padding-left:36px"><span class="g-button-right" style="padding-right:36px;"><span class="text" style="width:auto;">确定</span></span></a>');
       var $dialog_test_button = $('<a class="g-button g-button" data-button-id="" data-button-index href="javascript:void(0)" style="padding-left:36px"><span class="g-button-right" style="padding-right:36px;"><span class="text" style="width:auto;">测试</span></span></a>');
