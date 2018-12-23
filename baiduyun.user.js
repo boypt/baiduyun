@@ -1299,7 +1299,7 @@
           } else if (list_grid_status == 'grid') {
             filename = $('div.file-name a', $parent).attr('title');
           }
-          if ($parent.hasClass('item-active')) {
+          if ($parent.hasClass('JS-item-active')) {
             slog('取消选中文件：' + filename);
             for (var i = 0; i < selectFileList.length; i++) {
               if (selectFileList[i].filename == filename) {
